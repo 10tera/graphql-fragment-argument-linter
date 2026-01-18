@@ -90,7 +90,8 @@ export class FragmentArgumentVisitor {
 
   /**
    * Validate fragment spreads against their definitions
-   * @argumentDefinitionsがあるfragmentにおいて、@argumentsがない場合はエラー
+   * 1. @argumentDefinitionsがあるfragmentにおいて、@argumentsがない場合はエラー
+   * 2. @argumentDefinitionsがないfragmentにおいて、@argumentsがある場合はエラー
    */
   public validateFragmentSpreads(): void {
     for (const spread of this.fragmentSpreads) {
@@ -100,11 +101,24 @@ export class FragmentArgumentVisitor {
         throw new Error(`Fragment definition not found for ${spread.fragmentName}`);
       }
 
-      // If fragment has @argumentDefinitions but spread doesn't have @arguments
+      // Case 1: Fragment has @argumentDefinitions but spread doesn't have @arguments
       if (definition.hasArgumentDefinitions && !spread.hasArguments) {
         this.addIssue({
           level: 'error',
           message: `Fragment spread "${spread.fragmentName}" must have @arguments directive because the fragment defines @argumentDefinitions`,
+          fragmentName: spread.fragmentName,
+          location: spread.node.loc ? {
+            line: spread.node.loc.startToken.line,
+            column: spread.node.loc.startToken.column
+          } : undefined
+        });
+      }
+
+      // Case 2: Fragment doesn't have @argumentDefinitions but spread has @arguments
+      if (!definition.hasArgumentDefinitions && spread.hasArguments) {
+        this.addIssue({
+          level: 'error',
+          message: `Fragment spread "${spread.fragmentName}" has @arguments directive but the fragment does not define @argumentDefinitions`,
           fragmentName: spread.fragmentName,
           location: spread.node.loc ? {
             line: spread.node.loc.startToken.line,

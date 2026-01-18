@@ -188,6 +188,34 @@ describe('Fragment Argument Linter Plugin', () => {
       expect(result).toContain('No issues found');
     });
 
+    test('@arguments があるのに @argumentDefinitions がない場合はエラー', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User {
+              id
+              name
+            }
+
+            query GetUser {
+              user(id: "1") {
+                ...UserFields @arguments(userId: "1")
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: false
+      };
+      
+      expect(() => {
+        plugin(schema, documents, config);
+      }).toThrow('does not define @argumentDefinitions');
+    });
+
     test('@argumentDefinitions がない場合、@arguments なしでもOK', () => {
       const documents = [
         {

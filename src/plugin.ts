@@ -1,5 +1,5 @@
-import { GraphQLSchema, FragmentSpreadNode, SelectionSetNode } from 'graphql';
-import { PluginFunction, Types } from '@graphql-codegen/plugin-helpers';
+import {  FragmentSpreadNode, SelectionSetNode } from 'graphql';
+import { PluginFunction } from '@graphql-codegen/plugin-helpers';
 import { LoadedFragment } from '@graphql-codegen/visitor-plugin-common';
 import { FragmentArgumentLinterConfig, ValidationIssue } from './types';
 import { FragmentArgumentVisitor } from './visitor';
