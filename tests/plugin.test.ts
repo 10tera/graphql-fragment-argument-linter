@@ -7,6 +7,7 @@ describe('Fragment Argument Linter Plugin', () => {
   const schema = buildSchema(`
     type Query {
       user(id: ID!): User
+      post(id: ID!): Post
     }
 
     type User {
@@ -24,200 +25,291 @@ describe('Fragment Argument Linter Plugin', () => {
     }
   `);
 
-  test('should generate a report for documents without fragments', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          query GetUser {
-            user(id: "1") {
+  describe('基本動作', () => {
+    test('フラグメントがない場合は成功する', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            query GetUser {
+              user(id: "1") {
+                id
+                name
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {};
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('Fragment Argument Linter Report');
+      expect(result).toContain('No issues found');
+    });
+
+    test('フラグメントが1つある場合、統計情報が正しい', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User {
               id
               name
             }
-          }
-        `)
-      }
-    ];
+          `)
+        }
+      ];
 
-    const config: FragmentArgumentLinterConfig = {};
-    const result = plugin(schema, documents, config, {});
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: false
+      };
+      const result = plugin(schema, documents, config);
 
-    expect(result).toContain('Fragment Argument Linter Report');
-    expect(result).toContain('Fragments checked: 0');
-    expect(result).toContain('No issues found');
+      expect(result).toContain('Fragments with issues: 0');
+      expect(result).toContain('Total issues: 0');
+    });
   });
 
-  test('should validate fragments in documents', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          fragment UserFields on User {
-            id
-            name
-            email
-          }
-
-          query GetUser {
-            user(id: "1") {
-              ...UserFields
-            }
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {};
-    const result = plugin(schema, documents, config, {});
-
-    expect(result).toContain('Fragment Argument Linter Report');
-    expect(result).toContain('Fragments checked: 1');
-  });
-
-  test('should enforce strict mode naming conventions', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          fragment userFields on User {
-            id
-            name
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {
-      strictMode: true
-    };
-    const result = plugin(schema, documents, config, {});
-
-    expect(result).toContain('Fragment Argument Linter Report');
-    expect(result).toContain('Fragments checked: 1');
-  });
-
-  test('should ignore specified fragments', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          fragment IgnoredFragment on User {
-            id
-          }
-
-          fragment CheckedFragment on User {
-            name
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {
-      ignoreFragments: ['IgnoredFragment']
-    };
-    const result = plugin(schema, documents, config, {});
-
-    expect(result).toContain('Fragments checked: 2');
-  });
-
-  test('should handle multiple fragments across multiple documents', () => {
-    const documents = [
-      {
-        location: 'user.graphql',
-        document: parse(`
-          fragment UserBasic on User {
-            id
-            name
-          }
-        `)
-      },
-      {
-        location: 'post.graphql',
-        document: parse(`
-          fragment PostBasic on Post {
-            id
-            title
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {};
-    const result = plugin(schema, documents, config, {});
-
-    expect(result).toContain('Fragments checked: 2');
-  });
-
-  test('should apply custom validation rules', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          fragment TestFragment on User {
-            id
-            name
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {
-      customRules: [
+  describe('requireArgumentDefinitions オプション', () => {
+    test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
+      const documents = [
         {
-          name: 'test-rule',
-          validate: (fragmentName, args) => {
-            return [
-              {
-                level: 'warning',
-                message: 'Custom rule triggered',
-                fragmentName
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User {
+              id
+              name
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: false
+      };
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('No issues found');
+    });
+
+    test('requireArgumentDefinitions が true（デフォルト）の場合、@argumentDefinitions がないとエラーになる', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User {
+              id
+              name
+            }
+          `)
+        }
+      ];
+
+      // デフォルト設定（requireArgumentDefinitions: true）
+      const config: FragmentArgumentLinterConfig = {};
+      
+      expect(() => {
+        plugin(schema, documents, config);
+      }).toThrow('Fragment Argument Linter failed');
+    });
+
+    test('@argumentDefinitions がある場合は成功する', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
+              id
+              name
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: true
+      };
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('No issues found');
+    });
+  });
+
+  describe('フラグメントスプレッドの検証', () => {
+    test('@argumentDefinitions がある場合、スプレッド時に @arguments が必須', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
+              id
+              name
+            }
+
+            query GetUser {
+              user(id: "1") {
+                ...UserFields
               }
-            ];
-          }
+            }
+          `)
         }
-      ]
-    };
-    const result = plugin(schema, documents, config, {});
+      ];
 
-    expect(result).toContain('Custom rule triggered');
-    expect(result).toContain('WARNING');
+      const config: FragmentArgumentLinterConfig = {};
+      
+      expect(() => {
+        plugin(schema, documents, config);
+      }).toThrow('must have @arguments directive');
+    });
+
+    test('@argumentDefinitions と @arguments が両方ある場合は成功', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
+              id
+              name
+            }
+
+            query GetUser($userId: ID!) {
+              user(id: $userId) {
+                ...UserFields @arguments(userId: $userId)
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {};
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('No issues found');
+    });
+
+    test('@argumentDefinitions がない場合、@arguments なしでもOK', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User {
+              id
+              name
+            }
+
+            query GetUser {
+              user(id: "1") {
+                ...UserFields
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: false
+      };
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('No issues found');
+    });
+
+    test('ネストしたフラグメントスプレッドも検証される', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserFields on User @argumentDefinitions(showEmail: {type: "Boolean!"}) {
+              id
+              name
+            }
+
+            query GetUser {
+              user(id: "1") {
+                posts {
+                  author {
+                    ...UserFields
+                  }
+                }
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {};
+      
+      expect(() => {
+        plugin(schema, documents, config);
+      }).toThrow('must have @arguments directive');
+    });
   });
 
-  test('should generate summary with correct statistics', () => {
-    const documents = [
-      {
-        location: 'test.graphql',
-        document: parse(`
-          fragment Fragment1 on User {
-            id
-          }
-          
-          fragment Fragment2 on Post {
-            id
-          }
-        `)
-      }
-    ];
-
-    const config: FragmentArgumentLinterConfig = {
-      customRules: [
+  describe('複数フラグメントの処理', () => {
+    test('複数のフラグメントをそれぞれ検証する', () => {
+      const documents = [
         {
-          name: 'test-rule',
-          validate: (fragmentName) => [
-            {
-              level: 'error',
-              message: 'Test error',
-              fragmentName
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserBasic on User @argumentDefinitions {
+              id
             }
-          ]
-        }
-      ]
-    };
-    const result = plugin(schema, documents, config, {});
 
-    expect(result).toContain('Fragments checked: 2');
-    expect(result).toContain('Fragments with issues: 2');
-    expect(result).toContain('Total issues: 2');
+            fragment PostBasic on Post @argumentDefinitions {
+              id
+            }
+
+            query GetData {
+              user(id: "1") {
+                ...UserBasic @arguments
+              }
+              post(id: "1") {
+                ...PostBasic @arguments
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {};
+      const result = plugin(schema, documents, config);
+
+      expect(result).toContain('No issues found');
+    });
+
+    test('複数のエラーをすべて報告する', () => {
+      const documents = [
+        {
+          location: 'test.graphql',
+          document: parse(`
+            fragment UserBasic on User {
+              id
+            }
+
+            fragment PostBasic on Post {
+              id
+            }
+
+            query GetData {
+              user(id: "1") {
+                ...UserBasic
+              }
+              post(id: "1") {
+                ...PostBasic
+              }
+            }
+          `)
+        }
+      ];
+
+      const config: FragmentArgumentLinterConfig = {
+        requireArgumentDefinitions: true
+      };
+      
+      expect(() => {
+        plugin(schema, documents, config);
+      }).toThrow('2 error(s)');
+    });
   });
 });
-

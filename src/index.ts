@@ -6,10 +6,9 @@
  */
 
 export { plugin } from './plugin';
-export { FragmentArgumentVisitor } from './visitor';
 export type {
   FragmentArgumentLinterConfig,
-  CustomRule,
+  // CustomRule,
   FragmentArgument,
   ValidationIssue,
   LintResult
