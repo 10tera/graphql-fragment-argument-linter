@@ -24,7 +24,7 @@
     "fragment",
     "typescript"
   ],
-  "author": "",
+  "author": "Yuto Tanimura",
   "license": "MIT",
   "dependencies": {
     "@graphql-codegen/plugin-helpers": "^5.0.0",
