@@ -86,7 +86,7 @@ export const plugin: PluginFunction<
  * Recursively find all fragment spreads in a selection set
  * 全てのfragmentの呼び出し箇所を収集
  */
-function findFragmentSpreads(selectionSet: SelectionSetNode): FragmentSpreadNode[] {
+const findFragmentSpreads = (selectionSet: SelectionSetNode): FragmentSpreadNode[] => {
   const spreads: FragmentSpreadNode[] = [];
   
   if (!selectionSet || !selectionSet.selections) {
@@ -104,15 +104,15 @@ function findFragmentSpreads(selectionSet: SelectionSetNode): FragmentSpreadNode
   }
 
   return spreads;
-}
+};
 
 /**
  * Generate a formatted report from validation issues
  */
-function generateReport(
+const generateReport = (
   issues: ValidationIssue[],
   stats: {  fragmentsWithIssues: number; totalIssues: number }
-): string {
+): string => {
   const lines: string[] = [];
 
   lines.push('# GraphQL Fragment Argument Linter Report');
@@ -158,12 +158,12 @@ function generateReport(
   }
 
   return lines.join('\n');
-}
+};
 
 /**
  * Get an icon for the issue level
  */
-function getIconForLevel(level: 'error' | 'warning' | 'info'): string {
+const getIconForLevel = (level: 'error' | 'warning' | 'info'): string => {
   switch (level) {
     case 'error':
       return '❌';
@@ -172,5 +172,5 @@ function getIconForLevel(level: 'error' | 'warning' | 'info'): string {
     case 'info':
       return 'ℹ️';
   }
-}
+};
 
