@@ -5,9 +5,9 @@
     "lib": ["ES2020"],
 
     /* Modules */
-    "module": "CommonJS",
+    "module": "node16",
     "rootDir": "./src",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
 
     /* Emit */
