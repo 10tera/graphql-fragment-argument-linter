@@ -3,6 +3,7 @@ import { PluginFunction } from '@graphql-codegen/plugin-helpers';
 import { LoadedFragment } from '@graphql-codegen/visitor-plugin-common';
 import { FragmentArgumentLinterConfig, ValidationIssue } from './types';
 import { FragmentArgumentVisitor } from './visitor';
+import { FragmentArgumentAnalyzer } from './fragmentArgumentAnalyzer';
 
 /**
  * The main plugin function for GraphQL Code Generator
@@ -16,60 +17,13 @@ export const plugin: PluginFunction<
   config,
 ) => {
   const configWithDefaults = {
-    requireArgumentDefinitions: config.requireArgumentDefinitions ?? true
+    //requireArgumentDefinitions: config.requireArgumentDefinitions ?? true
   } satisfies Required<FragmentArgumentLinterConfig>;
 
+  const fragmentArgumentAnalyzer = new FragmentArgumentAnalyzer(documents);
 
-  // Extract fragments from documents
-  // NOTE: 全てのfragmentの収集
-  const allFragments: LoadedFragment[] = [];
-  for (const documentFile of documents) {
-    if (documentFile.document) {
-      for (const definition of documentFile.document.definitions) {
-        if (definition.kind === 'FragmentDefinition') {
-          allFragments.push({
-            node: definition,
-            name: definition.name.value,
-            onType: definition.typeCondition.name.value,
-            isExternal: false
-          });
-        }
-      }
-    }
-  }
-
-  // Create visitor and validate fragments
-  const visitor = new FragmentArgumentVisitor(schema, allFragments, configWithDefaults);
-
-  // First pass: validate all fragment definitions
-  // NOTE: configに従って@argumentDefinitionsが必要なら、その存在チェック
-  for (const fragment of allFragments) {
-    visitor.validateFragment(fragment.name, fragment.node);
-  }
-
-  // Second pass: collect all fragment spreads
-  // NOTE: 全てのfragmentの呼び出し箇所を収集
-  for (const documentFile of documents) {
-    if (documentFile.document) {
-      for (const definition of documentFile.document.definitions) {
-        if (definition.kind === 'OperationDefinition' || definition.kind === 'FragmentDefinition') {
-          // Recursively find fragment spreads in selection set
-          const spreads = findFragmentSpreads(definition.selectionSet);
-          for (const spread of spreads) {
-            visitor.collectFragmentSpread(spread);
-          }
-        }
-      }
-    }
-  }
-
-  // Third pass: validate fragment spreads against definitions
-  // NOTE: @argumentDefinitionsがあるfragmentが、@argumentsがない場合はエラー
-  visitor.validateFragmentSpreads();
-
-  // Get validation results
-  const issues = visitor.getIssues();
-  const stats = visitor.getStats();
+  const issues = fragmentArgumentAnalyzer.getIssues();
+  const stats = fragmentArgumentAnalyzer.getStats();
 
   // If there are errors, throw to fail the build
   const errors = issues.filter(i => i.level === 'error');
@@ -83,43 +37,19 @@ export const plugin: PluginFunction<
 };
 
 /**
- * Recursively find all fragment spreads in a selection set
- * 全てのfragmentの呼び出し箇所を収集
- */
-const findFragmentSpreads = (selectionSet: SelectionSetNode): FragmentSpreadNode[] => {
-  const spreads: FragmentSpreadNode[] = [];
-  
-  if (!selectionSet || !selectionSet.selections) {
-    return spreads;
-  }
-
-  for (const selection of selectionSet.selections) {
-    if (selection.kind === 'FragmentSpread') {
-      spreads.push(selection);
-      continue
-    }
-    if (selection.selectionSet) {
-      spreads.push(...findFragmentSpreads(selection.selectionSet));
-    }
-  }
-
-  return spreads;
-};
-
-/**
  * Generate a formatted report from validation issues
  */
 const generateReport = (
   issues: ValidationIssue[],
-  stats: {  fragmentsWithIssues: number; totalIssues: number }
+  stats: {  issuedFragmentsCount: number; issuesCount: number }
 ): string => {
   const lines: string[] = [];
 
   lines.push('# GraphQL Fragment Argument Linter Report');
   lines.push('');
   lines.push('## Summary');
-  lines.push(`- Fragments with issues: ${stats.fragmentsWithIssues}`);
-  lines.push(`- Total issues: ${stats.totalIssues}`);
+  lines.push(`- Fragments with issues: ${stats.issuedFragmentsCount}`);
+  lines.push(`- Total issues: ${stats.issuesCount}`);
   lines.push('');
 
   if (issues.length === 0) {

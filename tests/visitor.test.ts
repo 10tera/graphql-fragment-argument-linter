@@ -16,46 +16,46 @@ describe('FragmentArgumentVisitor', () => {
   `);
 
   describe('validateFragment', () => {
-    test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
-      const document = parse(`
-        fragment UserFields on User {
-          id
-          name
-        }
-      `);
+    // test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
+    //   const document = parse(`
+    //     fragment UserFields on User {
+    //       id
+    //       name
+    //     }
+    //   `);
 
-      const fragment = document.definitions[0] as any;
-      const visitor = new FragmentArgumentVisitor(schema, [], {
-        requireArgumentDefinitions: false
-      });
+    //   const fragment = document.definitions[0] as any;
+    //   const visitor = new FragmentArgumentVisitor(schema, [], {
+    //     requireArgumentDefinitions: false
+    //   });
 
-      visitor.validateFragment('UserFields', fragment);
+    //   visitor.validateFragment('UserFields', fragment);
 
-      const issues = visitor.getIssues();
-      expect(issues).toHaveLength(0);
-    });
+    //   const issues = visitor.getIssues();
+    //   expect(issues).toHaveLength(0);
+    // });
 
-    test('requireArgumentDefinitions が true の場合、@argumentDefinitions がないとエラーになる', () => {
-      const document = parse(`
-        fragment UserFields on User {
-          id
-          name
-        }
-      `);
+    // test('requireArgumentDefinitions が true の場合、@argumentDefinitions がないとエラーになる', () => {
+    //   const document = parse(`
+    //     fragment UserFields on User {
+    //       id
+    //       name
+    //     }
+    //   `);
 
-      const fragment = document.definitions[0] as any;
-      const visitor = new FragmentArgumentVisitor(schema, [], {
-        requireArgumentDefinitions: true
-      });
+    //   const fragment = document.definitions[0] as any;
+    //   const visitor = new FragmentArgumentVisitor(schema, [], {
+    //     requireArgumentDefinitions: true
+    //   });
 
-      visitor.validateFragment('UserFields', fragment);
+    //   visitor.validateFragment('UserFields', fragment);
 
-      const issues = visitor.getIssues();
-      expect(issues).toHaveLength(1);
-      expect(issues[0].level).toBe('error');
-      expect(issues[0].message).toContain('must have @argumentDefinitions directive');
-      expect(issues[0].fragmentName).toBe('UserFields');
-    });
+    //   const issues = visitor.getIssues();
+    //   expect(issues).toHaveLength(1);
+    //   expect(issues[0].level).toBe('error');
+    //   expect(issues[0].message).toContain('must have @argumentDefinitions directive');
+    //   expect(issues[0].fragmentName).toBe('UserFields');
+    // });
 
     test('@argumentDefinitions がある場合、エラーにならない', () => {
       const document = parse(`
@@ -75,51 +75,9 @@ describe('FragmentArgumentVisitor', () => {
       const issues = visitor.getIssues();
       expect(issues).toHaveLength(0);
     });
-
-    test('位置情報が正しく記録される', () => {
-      const document = parse(`
-        fragment UserFields on User {
-          id
-        }
-      `);
-
-      const fragment = document.definitions[0] as any;
-      const visitor = new FragmentArgumentVisitor(schema, [], {
-        requireArgumentDefinitions: true
-      });
-
-      visitor.validateFragment('UserFields', fragment);
-
-      const issues = visitor.getIssues();
-      expect(issues[0].location).toBeDefined();
-      expect(issues[0].location?.line).toBeGreaterThan(0);
-      expect(issues[0].location?.column).toBeGreaterThanOrEqual(0);
-    });
   });
 
   describe('collectFragmentSpread', () => {
-    test('フラグメントスプレッドを記録する', () => {
-      const document = parse(`
-        query GetUser {
-          user(id: "1") {
-            ...UserFields
-          }
-        }
-      `);
-
-      const visitor = new FragmentArgumentVisitor(schema, [], {
-        requireArgumentDefinitions: false
-      });
-
-      // クエリの中からフラグメントスプレッドを探す
-      const query = document.definitions[0] as any;
-      const spread = query.selectionSet.selections[0].selectionSet.selections[0];
-
-      visitor.collectFragmentSpread(spread);
-
-      // getStats で確認はできないが、内部的に記録されている
-      // validateFragmentSpreads で使われるはず
-    });
 
     test('@arguments の有無を正しく記録する', () => {
       const documentWithArgs = parse(`

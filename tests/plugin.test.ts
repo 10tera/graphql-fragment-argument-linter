@@ -61,9 +61,7 @@ describe('Fragment Argument Linter Plugin', () => {
         }
       ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: false
-      };
+      const config: FragmentArgumentLinterConfig = {};
       const result = plugin(schema, documents, config);
 
       expect(result).toContain('Fragments with issues: 0');
@@ -71,70 +69,70 @@ describe('Fragment Argument Linter Plugin', () => {
     });
   });
 
-  describe('requireArgumentDefinitions オプション', () => {
-    test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User {
-              id
-              name
-            }
-          `)
-        }
-      ];
+  // describe('requireArgumentDefinitions オプション', () => {
+  //   test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
+  //     const documents = [
+  //       {
+  //         location: 'test.graphql',
+  //         document: parse(`
+  //           fragment UserFields on User {
+  //             id
+  //             name
+  //           }
+  //         `)
+  //       }
+  //     ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: false
-      };
-      const result = plugin(schema, documents, config);
+  //     const config: FragmentArgumentLinterConfig = {
+  //       requireArgumentDefinitions: false
+  //     };
+  //     const result = plugin(schema, documents, config);
 
-      expect(result).toContain('No issues found');
-    });
+  //     expect(result).toContain('No issues found');
+  //   });
 
-    test('requireArgumentDefinitions が true（デフォルト）の場合、@argumentDefinitions がないとエラーになる', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User {
-              id
-              name
-            }
-          `)
-        }
-      ];
+  //   test('requireArgumentDefinitions が true（デフォルト）の場合、@argumentDefinitions がないとエラーになる', () => {
+  //     const documents = [
+  //       {
+  //         location: 'test.graphql',
+  //         document: parse(`
+  //           fragment UserFields on User {
+  //             id
+  //             name
+  //           }
+  //         `)
+  //       }
+  //     ];
 
-      // デフォルト設定（requireArgumentDefinitions: true）
-      const config: FragmentArgumentLinterConfig = {};
+  //     // デフォルト設定（requireArgumentDefinitions: true）
+  //     const config: FragmentArgumentLinterConfig = {};
       
-      expect(() => {
-        plugin(schema, documents, config);
-      }).toThrow('Fragment Argument Linter failed');
-    });
+  //     expect(() => {
+  //       plugin(schema, documents, config);
+  //     }).toThrow('Fragment Argument Linter failed');
+  //   });
 
-    test('@argumentDefinitions がある場合は成功する', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
-              id
-              name
-            }
-          `)
-        }
-      ];
+  //   test('@argumentDefinitions がある場合は成功する', () => {
+  //     const documents = [
+  //       {
+  //         location: 'test.graphql',
+  //         document: parse(`
+  //           fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
+  //             id
+  //             name
+  //           }
+  //         `)
+  //       }
+  //     ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: true
-      };
-      const result = plugin(schema, documents, config);
+  //     const config: FragmentArgumentLinterConfig = {
+  //       requireArgumentDefinitions: true
+  //     };
+  //     const result = plugin(schema, documents, config);
 
-      expect(result).toContain('No issues found');
-    });
-  });
+  //     expect(result).toContain('No issues found');
+  //   });
+  // });
 
   describe('フラグメントスプレッドの検証', () => {
     test('@argumentDefinitions がある場合、スプレッド時に @arguments が必須', () => {
@@ -207,9 +205,7 @@ describe('Fragment Argument Linter Plugin', () => {
         }
       ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: false
-      };
+      const config: FragmentArgumentLinterConfig = {};
       
       expect(() => {
         plugin(schema, documents, config);
@@ -235,9 +231,7 @@ describe('Fragment Argument Linter Plugin', () => {
         }
       ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: false
-      };
+      const config: FragmentArgumentLinterConfig = {};
       const result = plugin(schema, documents, config);
 
       expect(result).toContain('No issues found');
@@ -311,7 +305,7 @@ describe('Fragment Argument Linter Plugin', () => {
         {
           location: 'test.graphql',
           document: parse(`
-            fragment UserBasic on User {
+            fragment UserBasic on User @argumentDefinitions {
               id
             }
 
@@ -324,16 +318,14 @@ describe('Fragment Argument Linter Plugin', () => {
                 ...UserBasic
               }
               post(id: "1") {
-                ...PostBasic
+                ...PostBasic @arguments
               }
             }
           `)
         }
       ];
 
-      const config: FragmentArgumentLinterConfig = {
-        requireArgumentDefinitions: true
-      };
+      const config: FragmentArgumentLinterConfig = {};
       
       expect(() => {
         plugin(schema, documents, config);

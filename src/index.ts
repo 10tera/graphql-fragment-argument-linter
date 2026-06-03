@@ -9,7 +9,7 @@ export { plugin } from './plugin';
 export type {
   FragmentArgumentLinterConfig,
   // CustomRule,
-  FragmentArgument,
+  FragmentArgumentDefinition as FragmentArgument,
   ValidationIssue,
   LintResult
 } from './types';
