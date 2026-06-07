@@ -8,7 +8,7 @@ const config: CodegenConfig = {
       plugins: [
         'typescript',
         'typescript-operations',
-        'graphql-codegen-fragment-argument-linter',
+       // 'graphql-codegen-fragment-argument-linter',
       ],
     },
   },

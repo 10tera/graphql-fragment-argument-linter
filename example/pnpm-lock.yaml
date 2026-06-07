@@ -22,8 +22,8 @@ importers:
         specifier: ^4.0.0
         version: 4.6.1(graphql@16.14.1)
       graphql-codegen-fragment-argument-linter:
-        specifier: file:../
-        version: file:..(graphql@16.14.1)
+        specifier: 0.1.0
+        version: 0.1.0(graphql@16.14.1)
       ts-node:
         specifier: ^10.9.0
         version: 10.9.2(@types/node@25.9.2)(typescript@5.9.3)
@@ -788,8 +788,8 @@ packages:
     resolution: {integrity: sha512-jhIXaOzy1sb8IyocaruWSn1TjmnBVs8Ayhcy83rmxNJ8q2uWKCAj3CnJY+KpGSXCueAPc0i05kVvVKtP1t9S3g==}
     engines: {node: '>=10'}
 
-  graphql-codegen-fragment-argument-linter@file:..:
-    resolution: {directory: .., type: directory}
+  graphql-codegen-fragment-argument-linter@0.1.0:
+    resolution: {integrity: sha512-yzrhJMNBq4+FH51n5sCXE8SiaEojstFEZPXq0XceoJJZ3RsUvRp8/qYQatPpkhktKNRrMrzPmOZ7otYHYmZQ9Q==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       graphql: ^15.0.0 || ^16.0.0
@@ -2434,7 +2434,7 @@ snapshots:
       merge2: 1.4.1
       slash: 3.0.0
 
-  graphql-codegen-fragment-argument-linter@file:..(graphql@16.14.1):
+  graphql-codegen-fragment-argument-linter@0.1.0(graphql@16.14.1):
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.14.1)
       '@graphql-codegen/visitor-plugin-common': 5.8.0(graphql@16.14.1)

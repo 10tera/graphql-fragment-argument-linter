@@ -60,7 +60,7 @@ export type UserDetailFragment = { __typename?: 'User', id: string, name: string
 
 export type GetUserQueryVariables = Exact<{
   userId: Scalars['ID']['input'];
-  friendId: Scalars['ID']['input'];
+  friendId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 

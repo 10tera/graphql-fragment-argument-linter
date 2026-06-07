@@ -1,10 +1,10 @@
-query GetUser($userId: ID!, $friendId: ID!) {
+query GetUser($userId: ID!, $friendId: ID) {
   user(id: $userId) {
     ...UserWithFriend @arguments(friendId: $friendId)
   }
 }
 
-query GetUserDetail($userId: ID!, $friendId: ID!, $showEmail: Boolean!) {
+query GetUserDetail($userId: ID!, $friendId: ID!, $showEmail: Boolean) {
   user(id: $userId) {
     ...UserDetail @arguments(friendId: $friendId, showEmail: $showEmail)
   }
