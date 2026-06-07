@@ -17,7 +17,6 @@ export const validateArgumentMatch = (
     if (!defined) {
       errors.push({
         message: `Argument "${passedArg.name}" is not defined in fragment "${fragmentName}"`,
-        argumentName: passedArg.name
       });
     }
   }
@@ -28,7 +27,6 @@ export const validateArgumentMatch = (
     if (!passed) {
       errors.push({
         message: `Required argument "${definedArg.name}" is missing in fragment spread "${fragmentName}"`,
-        argumentName: definedArg.name
       });
     }
   }

@@ -1,0 +1,16 @@
+# このファイルは意図的にエラーになるケースのサンプル
+# 拡張子を .graphql に変えると codegen がエラーで落ちることを確認できる
+
+# ❌ ERROR: @argumentDefinitions があるのに @arguments なし
+query BadQuery1 {
+  user(id: "1") {
+    ...UserWithFriend
+  }
+}
+
+# ❌ ERROR: @argumentDefinitions がないのに @arguments あり
+query BadQuery2($friendId: ID!) {
+  post(id: "1") {
+    ...PostBasic @arguments(friendId: $friendId)
+  }
+}

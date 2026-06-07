@@ -1,4 +1,5 @@
 import { buildSchema, parse } from 'graphql';
+import { Types } from '@graphql-codegen/plugin-helpers';
 import { plugin } from '../src/plugin';
 import { FragmentArgumentLinterConfig } from '../src/types';
 import { describe, test, expect } from 'vitest';
@@ -15,6 +16,7 @@ describe('Fragment Argument Linter Plugin', () => {
       name: String!
       email: String!
       posts: [Post!]!
+      friend(id: ID): User
     }
 
     type Post {
@@ -25,311 +27,350 @@ describe('Fragment Argument Linter Plugin', () => {
     }
   `);
 
+  const config: FragmentArgumentLinterConfig = {};
+
   describe('基本動作', () => {
-    test('フラグメントがない場合は成功する', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            query GetUser {
-              user(id: "1") {
-                id
-                name
-              }
-            }
-          `)
-        }
-      ];
+    test('フラグメントがない場合はエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          query GetUser {
+            user(id: "1") { id name }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-      const config: FragmentArgumentLinterConfig = {};
-      const result = plugin(schema, documents, config);
-
-      expect(result).toContain('Fragment Argument Linter Report');
-      expect(result).toContain('No issues found');
+      expect(() => plugin(schema, documents, config)).not.toThrow();
     });
 
-    test('フラグメントが1つある場合、統計情報が正しい', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User {
-              id
-              name
-            }
-          `)
-        }
-      ];
+    test('フラグメントが1つある場合、エラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User { id name }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-      const config: FragmentArgumentLinterConfig = {};
-      const result = plugin(schema, documents, config);
-
-      expect(result).toContain('Fragments with issues: 0');
-      expect(result).toContain('Total issues: 0');
+      expect(() => plugin(schema, documents, config)).not.toThrow();
     });
   });
 
-  // describe('requireArgumentDefinitions オプション', () => {
-  //   test('requireArgumentDefinitions が false の場合、@argumentDefinitions がなくてもエラーにならない', () => {
-  //     const documents = [
-  //       {
-  //         location: 'test.graphql',
-  //         document: parse(`
-  //           fragment UserFields on User {
-  //             id
-  //             name
-  //           }
-  //         `)
-  //       }
-  //     ];
+  describe('@argumentDefinitions があれば @arguments が必須', () => {
+    test('@arguments なしでスプレッドするとエラー', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            id name
+          }
 
-  //     const config: FragmentArgumentLinterConfig = {
-  //       requireArgumentDefinitions: false
-  //     };
-  //     const result = plugin(schema, documents, config);
+          query GetUser {
+            user(id: "1") { ...UserFields }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-  //     expect(result).toContain('No issues found');
-  //   });
-
-  //   test('requireArgumentDefinitions が true（デフォルト）の場合、@argumentDefinitions がないとエラーになる', () => {
-  //     const documents = [
-  //       {
-  //         location: 'test.graphql',
-  //         document: parse(`
-  //           fragment UserFields on User {
-  //             id
-  //             name
-  //           }
-  //         `)
-  //       }
-  //     ];
-
-  //     // デフォルト設定（requireArgumentDefinitions: true）
-  //     const config: FragmentArgumentLinterConfig = {};
-      
-  //     expect(() => {
-  //       plugin(schema, documents, config);
-  //     }).toThrow('Fragment Argument Linter failed');
-  //   });
-
-  //   test('@argumentDefinitions がある場合は成功する', () => {
-  //     const documents = [
-  //       {
-  //         location: 'test.graphql',
-  //         document: parse(`
-  //           fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
-  //             id
-  //             name
-  //           }
-  //         `)
-  //       }
-  //     ];
-
-  //     const config: FragmentArgumentLinterConfig = {
-  //       requireArgumentDefinitions: true
-  //     };
-  //     const result = plugin(schema, documents, config);
-
-  //     expect(result).toContain('No issues found');
-  //   });
-  // });
-
-  describe('フラグメントスプレッドの検証', () => {
-    test('@argumentDefinitions がある場合、スプレッド時に @arguments が必須', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
-              id
-              name
-            }
-
-            query GetUser {
-              user(id: "1") {
-                ...UserFields
-              }
-            }
-          `)
-        }
-      ];
-
-      const config: FragmentArgumentLinterConfig = {};
-      
-      expect(() => {
-        plugin(schema, documents, config);
-      }).toThrow('must have @arguments directive');
+      expect(() => plugin(schema, documents, config)).toThrow('must have @arguments directive');
     });
 
-    test('@argumentDefinitions と @arguments が両方ある場合は成功', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User @argumentDefinitions(userId: {type: "ID!"}) {
-              id
-              name
-            }
+    test('@arguments ありでスプレッドするとエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            id
+            friend(id: $userId) { id }
+          }
 
-            query GetUser($userId: ID!) {
-              user(id: $userId) {
-                ...UserFields @arguments(userId: $userId)
-              }
-            }
-          `)
-        }
-      ];
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-      const config: FragmentArgumentLinterConfig = {};
-      const result = plugin(schema, documents, config);
-
-      expect(result).toContain('No issues found');
+      expect(() => plugin(schema, documents, config)).not.toThrow();
     });
 
-    test('@arguments があるのに @argumentDefinitions がない場合はエラー', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User {
-              id
-              name
-            }
+    test('ネストした選択でも検証される', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(showEmail: { type: "Boolean!" }) {
+            id name
+          }
 
-            query GetUser {
-              user(id: "1") {
-                ...UserFields @arguments(userId: "1")
-              }
+          query GetUser {
+            user(id: "1") {
+              posts { author { ...UserFields } }
             }
-          `)
-        }
-      ];
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-      const config: FragmentArgumentLinterConfig = {};
-      
-      expect(() => {
-        plugin(schema, documents, config);
-      }).toThrow('does not define @argumentDefinitions');
+      expect(() => plugin(schema, documents, config)).toThrow('must have @arguments directive');
+    });
+  });
+
+  describe('@argumentDefinitions がなければ @arguments は禁止', () => {
+    test('@argumentDefinitions がないのに @arguments をつけるとエラー', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User { id name }
+
+          query GetUser {
+            user(id: "1") { ...UserFields @arguments(userId: "1") }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('does not define @argumentDefinitions');
     });
 
-    test('@argumentDefinitions がない場合、@arguments なしでもOK', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User {
-              id
-              name
-            }
+    test('@argumentDefinitions も @arguments もない場合はエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User { id name }
 
-            query GetUser {
-              user(id: "1") {
-                ...UserFields
-              }
-            }
-          `)
-        }
-      ];
+          query GetUser {
+            user(id: "1") { ...UserFields }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-      const config: FragmentArgumentLinterConfig = {};
-      const result = plugin(schema, documents, config);
-
-      expect(result).toContain('No issues found');
-    });
-
-    test('ネストしたフラグメントスプレッドも検証される', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserFields on User @argumentDefinitions(showEmail: {type: "Boolean!"}) {
-              id
-              name
-            }
-
-            query GetUser {
-              user(id: "1") {
-                posts {
-                  author {
-                    ...UserFields
-                  }
-                }
-              }
-            }
-          `)
-        }
-      ];
-
-      const config: FragmentArgumentLinterConfig = {};
-      
-      expect(() => {
-        plugin(schema, documents, config);
-      }).toThrow('must have @arguments directive');
+      expect(() => plugin(schema, documents, config)).not.toThrow();
     });
   });
 
   describe('複数フラグメントの処理', () => {
-    test('複数のフラグメントをそれぞれ検証する', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserBasic on User @argumentDefinitions {
-              id
-            }
+    test('複数フラグメントを @argumentDefinitions(空) + @arguments(空) でスプレッドするとエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserBasic on User @argumentDefinitions { id }
+          fragment PostBasic on Post @argumentDefinitions { id }
 
-            fragment PostBasic on Post @argumentDefinitions {
-              id
-            }
+          query GetData {
+            user(id: "1") { ...UserBasic @arguments }
+            post(id: "1") { ...PostBasic @arguments }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-            query GetData {
-              user(id: "1") {
-                ...UserBasic @arguments
-              }
-              post(id: "1") {
-                ...PostBasic @arguments
-              }
-            }
-          `)
-        }
-      ];
-
-      const config: FragmentArgumentLinterConfig = {};
-      const result = plugin(schema, documents, config);
-
-      expect(result).toContain('No issues found');
+      expect(() => plugin(schema, documents, config)).not.toThrow();
     });
 
-    test('複数のエラーをすべて報告する', () => {
-      const documents = [
-        {
-          location: 'test.graphql',
-          document: parse(`
-            fragment UserBasic on User @argumentDefinitions {
-              id
-            }
+    test('複数フラグメントでエラーがある場合、すべて報告される', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserBasic on User @argumentDefinitions { id }
+          fragment PostBasic on Post { id }
 
-            fragment PostBasic on Post {
-              id
-            }
+          query GetData {
+            user(id: "1") { ...UserBasic }
+            post(id: "1") { ...PostBasic @arguments }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
 
-            query GetData {
-              user(id: "1") {
-                ...UserBasic
-              }
-              post(id: "1") {
-                ...PostBasic @arguments
-              }
-            }
-          `)
-        }
-      ];
+      expect(() => plugin(schema, documents, config)).toThrow('2 error(s)');
+    });
+  });
 
-      const config: FragmentArgumentLinterConfig = {};
-      
-      expect(() => {
-        plugin(schema, documents, config);
-      }).toThrow('2 error(s)');
+  describe('変数宣言と使用の整合性チェック', () => {
+    test('@argumentDefinitions で宣言した変数が fragment 内で未使用の場合エラー', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            id name
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('never used in the fragment body');
+    });
+
+    test('fragment 内で使っている変数が @argumentDefinitions に未宣言の場合エラー', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+            friend(id: $undeclared) { id }
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('not declared in @argumentDefinitions');
+    });
+
+    test('変数をフィールドにも使いつつ子フラグメントにも渡す場合はエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment Inner on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+          }
+
+          fragment Outer on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+            ...Inner @arguments(userId: $userId)
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...Outer @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).not.toThrow();
+    });
+
+    test('変数をフィールドにも使いつつ子フラグメントにも渡すが宣言されていない場合はエラー', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment Inner on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+          }
+
+          fragment Outer on User @argumentDefinitions(otherId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+            ...Inner @arguments(userId: $userId)
+          }
+
+          query GetUser($userId: ID!, $otherId: ID!) {
+            user(id: $userId) { ...Outer @arguments(otherId: $otherId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('not declared in @argumentDefinitions');
+    });
+
+    test('宣言した変数を子フラグメントへの @arguments で使う場合は使用とみなす', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment Inner on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+          }
+
+          fragment Outer on User @argumentDefinitions(userId: { type: "ID!" }) {
+            ...Inner @arguments(userId: $userId)
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...Outer @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).not.toThrow();
+    });
+  });
+
+  describe('引数の型互換性チェック', () => {
+    test('型が完全一致する場合はエラーなし', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).not.toThrow();
+    });
+
+    test('non-nullable 変数を nullable 引数に渡せる（ID! → ID）', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID" }) {
+            friend(id: $userId) { id }
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).not.toThrow();
+    });
+
+    test('nullable 変数を non-nullable 引数に渡せない（ID → ID!）', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment UserFields on User @argumentDefinitions(userId: { type: "ID!" }) {
+            id
+          }
+
+          query GetUser($userId: ID) {
+            user(id: $userId) { ...UserFields @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('is not compatible with');
+    });
+
+    test('フラグメントスコープ内でも型チェックが効く', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment Inner on User @argumentDefinitions(userId: { type: "ID!" }) {
+            friend(id: $userId) { id }
+          }
+
+          fragment Outer on User @argumentDefinitions(userId: { type: "ID!" }) {
+            ...Inner @arguments(userId: $userId)
+          }
+
+          query GetUser($userId: ID!) {
+            user(id: $userId) { ...Outer @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).not.toThrow();
+    });
+
+    test('フラグメントスコープ内で nullable 変数を non-nullable 引数に渡せない', () => {
+      const documents = [{
+        location: 'test.graphql',
+        document: parse(`
+          fragment Inner on User @argumentDefinitions(userId: { type: "ID!" }) { id }
+
+          fragment Outer on User @argumentDefinitions(userId: { type: "ID" }) {
+            ...Inner @arguments(userId: $userId)
+          }
+
+          query GetUser($userId: ID) {
+            user(id: $userId) { ...Outer @arguments(userId: $userId) }
+          }
+        `)
+      }] satisfies Types.DocumentFile[];
+
+      expect(() => plugin(schema, documents, config)).toThrow('is not compatible with');
     });
   });
 });

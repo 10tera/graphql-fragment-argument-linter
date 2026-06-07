@@ -1,0 +1,31 @@
+# ✅ OK: @argumentDefinitions あり、@arguments で正しく渡している
+fragment UserWithFriend on User @argumentDefinitions(friendId: { type: "ID!" }) {
+  id
+  name
+  friend(id: $friendId) {
+    id
+    name
+  }
+}
+
+# ✅ OK: @argumentDefinitions なし（引数不要なフラグメント）
+fragment PostBasic on Post {
+  id
+  title
+  content
+}
+
+# ✅ OK: 複数引数
+fragment UserDetail on User
+  @argumentDefinitions(
+    friendId: { type: "ID!" }
+    showEmail: { type: "Boolean!" }
+  ) {
+  id
+  name
+  email @include(if: $showEmail)
+  friend(id: $friendId) {
+    id
+    name
+  }
+}

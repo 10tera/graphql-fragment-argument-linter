@@ -1,0 +1,19 @@
+{
+  "name": "graphql-fragment-argument-linter-example",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "codegen": "graphql-codegen --config codegen.ts"
+  },
+  "dependencies": {
+    "graphql": "^16.8.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/typescript": "^4.0.0",
+    "@graphql-codegen/typescript-operations": "^4.0.0",
+    "graphql-fragment-argument-linter": "file:../",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}

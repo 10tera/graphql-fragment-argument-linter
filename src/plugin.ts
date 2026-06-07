@@ -1,39 +1,30 @@
-import {  FragmentSpreadNode, SelectionSetNode } from 'graphql';
 import { PluginFunction } from '@graphql-codegen/plugin-helpers';
-import { LoadedFragment } from '@graphql-codegen/visitor-plugin-common';
-import { FragmentArgumentLinterConfig, ValidationIssue } from './types';
-import { FragmentArgumentVisitor } from './visitor';
+import { ValidationIssue } from './types';
 import { FragmentArgumentAnalyzer } from './fragmentArgumentAnalyzer';
 
 /**
  * The main plugin function for GraphQL Code Generator
  */
 export const plugin: PluginFunction<
-  FragmentArgumentLinterConfig,
+  {},
   string
 > = (
-  schema,
+  _schema,
   documents,
-  config,
+  _config,
 ) => {
-  const configWithDefaults = {
-    //requireArgumentDefinitions: config.requireArgumentDefinitions ?? true
-  } satisfies Required<FragmentArgumentLinterConfig>;
-
   const fragmentArgumentAnalyzer = new FragmentArgumentAnalyzer(documents);
 
   const issues = fragmentArgumentAnalyzer.getIssues();
   const stats = fragmentArgumentAnalyzer.getStats();
 
-  // If there are errors, throw to fail the build
   const errors = issues.filter(i => i.level === 'error');
   if (errors.length > 0) {
-    const errorReport = generateReport(issues, stats);
-    throw new Error(`Fragment Argument Linter failed with ${errors.length} error(s):\n\n${errorReport}`);
+    throw new Error(`Fragment Argument Linter failed with ${errors.length} error(s):\n\n${generateReport(issues, stats)}`);
   }
 
-  // Format output
-  return generateReport(issues, stats);
+  console.log(generateReport(issues, stats));
+  return '';
 };
 
 /**
