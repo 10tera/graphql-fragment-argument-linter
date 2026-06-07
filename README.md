@@ -1,4 +1,4 @@
-# graphql-fragment-argument-linter
+# graphql-codegen-fragment-argument-linter
 
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that validates the usage of `@argumentDefinitions` and `@arguments` directives on fragments.
 
@@ -23,9 +23,9 @@ If a violation is found, the plugin throws an error and fails the codegen proces
 ## Installation
 
 ```bash
-npm install --save-dev graphql-fragment-argument-linter
+npm install --save-dev graphql-codegen-fragment-argument-linter
 # or
-pnpm add -D graphql-fragment-argument-linter
+pnpm add -D graphql-codegen-fragment-argument-linter
 ```
 
 ## Setup
@@ -43,7 +43,7 @@ const config: CodegenConfig = {
       plugins: [
         'typescript',
         'typescript-operations',
-        'graphql-fragment-argument-linter',
+        'graphql-codegen-fragment-argument-linter',
       ],
     },
   },

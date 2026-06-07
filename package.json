@@ -1,5 +1,5 @@
 {
-  "name": "graphql-fragment-argument-linter",
+  "name": "graphql-codegen-fragment-argument-linter",
   "version": "0.1.0",
   "description": "A GraphQL Code Generator plugin for linting fragment arguments",
   "main": "dist/index.js",

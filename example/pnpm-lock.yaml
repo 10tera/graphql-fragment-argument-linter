@@ -21,7 +21,7 @@ importers:
       '@graphql-codegen/typescript-operations':
         specifier: ^4.0.0
         version: 4.6.1(graphql@16.14.1)
-      graphql-fragment-argument-linter:
+      graphql-codegen-fragment-argument-linter:
         specifier: file:../
         version: file:..(graphql@16.14.1)
       ts-node:
@@ -788,6 +788,12 @@ packages:
     resolution: {integrity: sha512-jhIXaOzy1sb8IyocaruWSn1TjmnBVs8Ayhcy83rmxNJ8q2uWKCAj3CnJY+KpGSXCueAPc0i05kVvVKtP1t9S3g==}
     engines: {node: '>=10'}
 
+  graphql-codegen-fragment-argument-linter@file:..:
+    resolution: {directory: .., type: directory}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      graphql: ^15.0.0 || ^16.0.0
+
   graphql-config@5.1.6:
     resolution: {integrity: sha512-fCkYnm4Kdq3un0YIM4BCZHVR5xl0UeLP6syxxO7KAstdY7QVyVvTHP0kRPDYEP1v08uwtJVgis5sj3IOTLOniQ==}
     engines: {node: '>= 16.0.0'}
@@ -797,12 +803,6 @@ packages:
     peerDependenciesMeta:
       cosmiconfig-toml-loader:
         optional: true
-
-  graphql-fragment-argument-linter@file:..:
-    resolution: {directory: .., type: directory}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      graphql: ^15.0.0 || ^16.0.0
 
   graphql-request@6.1.0:
     resolution: {integrity: sha512-p+XPfS4q7aIpKVcgmnZKhMNqhltk20hfXtkaIkTfjjmiKMJ5xrt5c743cL03y/K7y1rg3WrIC49xGiEQ4mxdNw==}
@@ -2434,6 +2434,12 @@ snapshots:
       merge2: 1.4.1
       slash: 3.0.0
 
+  graphql-codegen-fragment-argument-linter@file:..(graphql@16.14.1):
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.14.1)
+      '@graphql-codegen/visitor-plugin-common': 5.8.0(graphql@16.14.1)
+      graphql: 16.14.1
+
   graphql-config@5.1.6(@types/node@25.9.2)(graphql@16.14.1)(typescript@5.9.3):
     dependencies:
       '@graphql-tools/graphql-file-loader': 8.1.14(graphql@16.14.1)
@@ -2455,12 +2461,6 @@ snapshots:
       - crossws
       - typescript
       - utf-8-validate
-
-  graphql-fragment-argument-linter@file:..(graphql@16.14.1):
-    dependencies:
-      '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.14.1)
-      '@graphql-codegen/visitor-plugin-common': 5.8.0(graphql@16.14.1)
-      graphql: 16.14.1
 
   graphql-request@6.1.0(graphql@16.14.1):
     dependencies:
