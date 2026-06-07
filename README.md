@@ -1,33 +1,36 @@
 # graphql-fragment-argument-linter
 
-GraphQL Code Generatorのプラグインで、GraphQLフラグメントの引数を検証・リントします。
+A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that validates the usage of `@argumentDefinitions` and `@arguments` directives on fragments.
 
-## 特徴
+## Overview
 
-- 🔍 フラグメント引数の検証
-- 📝 型の明示的な宣言をチェック
-- 📚 ドキュメントの存在確認
-- 🎯 命名規則の強制（strictモード）
-- 🔧 カスタム検証ルールのサポート
-- 📊 詳細な検証レポート生成
+This plugin enforces a convention where fragments declare their variables explicitly via `@argumentDefinitions`, and callers pass them via `@arguments`. This makes fragment dependencies self-contained and statically verifiable.
 
-## インストール
+```graphql
+fragment UserCard on User @argumentDefinitions(userId: { type: "ID!" }) {
+  friend(id: $userId) { id name }
+}
 
-```bash
-pnpm add -D graphql-fragment-argument-linter
+query GetUser($userId: ID!) {
+  user(id: $userId) {
+    ...UserCard @arguments(userId: $userId)  # ✅ explicit and type-safe
+  }
+}
 ```
 
-または
+If a violation is found, the plugin throws an error and fails the codegen process.
+
+## Installation
 
 ```bash
 npm install --save-dev graphql-fragment-argument-linter
+# or
+pnpm add -D graphql-fragment-argument-linter
 ```
 
-## 使い方
+## Setup
 
-### 基本的な設定
-
-`codegen.ts`ファイルを作成：
+Add the plugin to your `codegen.ts`. It can run alongside other plugins:
 
 ```typescript
 import type { CodegenConfig } from '@graphql-codegen/cli';
@@ -36,146 +39,152 @@ const config: CodegenConfig = {
   schema: './schema.graphql',
   documents: ['./src/**/*.graphql'],
   generates: {
-    './generated/lint-report.md': {
-      plugins: ['graphql-fragment-argument-linter']
-    }
-  }
+    './generated/types.ts': {
+      plugins: [
+        'typescript',
+        'typescript-operations',
+        'graphql-fragment-argument-linter',
+      ],
+    },
+  },
 };
 
 export default config;
 ```
 
-または`codegen.yml`を使用：
+## Directives
 
-```yaml
-schema: ./schema.graphql
-documents: './src/**/*.graphql'
-generates:
-  ./generated/lint-report.md:
-    plugins:
-      - graphql-fragment-argument-linter
+| Directive | Target | Role |
+|-----------|--------|------|
+| `@argumentDefinitions` | Fragment definition | Declares the variables a fragment accepts |
+| `@arguments` | Fragment spread | Passes variables to a fragment |
+
+These directives are build-time only and do not appear in the runtime GraphQL schema.
+
+## Validation Rules
+
+### Rule 1 — `@argumentDefinitions` syntax
+
+Each argument must follow the form `argName: { type: "GraphQLType" }`.
+
+```graphql
+# ✅ OK
+fragment F on User @argumentDefinitions(userId: { type: "ID!" }) { ... }
+
+# ❌ ERROR: missing type field
+fragment F on User @argumentDefinitions(userId: { foo: "bar" }) { ... }
+
+# ❌ ERROR: invalid GraphQL type string
+fragment F on User @argumentDefinitions(userId: { type: "!!!" }) { ... }
 ```
 
-### 設定オプション
+### Rule 2 — `@arguments` syntax
 
-```typescript
-const config: CodegenConfig = {
-  schema: './schema.graphql',
-  documents: ['./src/**/*.graphql'],
-  generates: {
-    './generated/lint-report.md': {
-      plugins: [
-        {
-          'graphql-fragment-argument-linter': {
-            // 厳密モードを有効化（命名規則を強制）
-            strictMode: true,
-            
-            // 検証から除外するフラグメント名のリスト
-            ignoreFragments: ['LegacyFragment', 'DeprecatedFragment'],
-            
-            // すべての引数に明示的な型を要求（デフォルト: true）
-            requireExplicitTypes: true,
-            
-            // すべての引数にドキュメントを要求（デフォルト: false）
-            requireDocumentation: true,
-            
-            // カスタム検証ルール
-            customRules: [
-              {
-                name: 'custom-rule-example',
-                validate: (fragmentName, args) => {
-                  // カスタム検証ロジック
-                  return [];
-                }
-              }
-            ]
-          }
-        }
-      ]
-    }
-  }
-};
+Argument values must be variable references. Literals are not allowed.
+
+```graphql
+# ✅ OK
+...UserCard @arguments(userId: $userId)
+
+# ❌ ERROR: literal value
+...UserCard @arguments(userId: "123")
 ```
 
-## 設定オプション詳細
+### Rule 3 — `@arguments` is required
 
-| オプション | 型 | デフォルト | 説明 |
-|----------|------|-----------|------|
-| `strictMode` | `boolean` | `false` | 厳密モードを有効化。フラグメント名と引数名の命名規則をチェック |
-| `ignoreFragments` | `string[]` | `[]` | 検証から除外するフラグメント名のリスト |
-| `requireExplicitTypes` | `boolean` | `true` | すべてのフラグメント引数に明示的な型を要求 |
-| `requireDocumentation` | `boolean` | `false` | すべてのフラグメント引数にドキュメントを要求 |
-| `customRules` | `CustomRule[]` | `[]` | カスタム検証ルールの配列 |
+A fragment spread must include `@arguments` when the fragment defines `@argumentDefinitions`.
 
-## 出力例
+```graphql
+# ✅ OK
+...UserCard @arguments(userId: $userId)
 
-プラグインは以下のような形式のレポートを生成します：
-
-```markdown
-# GraphQL Fragment Argument Linter Report
-
-## Summary
-- Fragments checked: 5
-- Fragments with issues: 2
-- Total issues: 3
-
-## Issues Found
-
-### Fragment: userFields
-❌ **ERROR**: Fragment "userFields" with arguments must use PascalCase naming
-⚠️ **WARNING**: Fragment argument "userId" should have documentation
-
-### Fragment: PostDetails
-❌ **ERROR**: Fragment argument "PostId" must use camelCase naming
+# ❌ ERROR
+...UserCard
 ```
 
-## 開発
+### Rule 4 — `@arguments` is forbidden
 
-### セットアップ
+A fragment spread must not include `@arguments` when the fragment does not define `@argumentDefinitions`.
+
+```graphql
+fragment Simple on User { id }
+
+# ✅ OK
+...Simple
+
+# ❌ ERROR
+...Simple @arguments(userId: $userId)
+```
+
+### Rule 5 — Argument names must match
+
+The argument names in `@arguments` must exactly match those declared in `@argumentDefinitions` — no extra, no missing.
+
+```graphql
+fragment F on User @argumentDefinitions(userId: { type: "ID!" }, role: { type: "String!" }) { ... }
+
+# ✅ OK
+...F @arguments(userId: $userId, role: $role)
+
+# ❌ ERROR: "unknown" is not declared
+...F @arguments(userId: $userId, unknown: $x)
+
+# ❌ ERROR: "role" is missing
+...F @arguments(userId: $userId)
+```
+
+### Rule 6 — Argument types must be compatible
+
+The type of each variable passed via `@arguments` must be compatible with the type declared in `@argumentDefinitions`.
+
+| Variable type | Declared type | Result |
+|--------------|--------------|--------|
+| `T!` | `T!` | ✅ exact match |
+| `T!` | `T` | ✅ non-nullable is assignable to nullable |
+| `T` | `T!` | ❌ nullable is not assignable to non-nullable |
+| `T` | `T` | ✅ exact match |
+
+```graphql
+fragment F on User @argumentDefinitions(userId: { type: "ID!" }) { ... }
+
+# ✅ OK: ID! → ID!
+query Q($userId: ID!) { ...F @arguments(userId: $userId) }
+
+# ❌ ERROR: ID → ID!
+query Q($userId: ID) { ...F @arguments(userId: $userId) }
+```
+
+### Rule 7 — Variable declaration and usage must match
+
+In a fragment with `@argumentDefinitions`, the set of declared arguments and the set of variables used in the fragment body must be identical.
+
+```graphql
+# ✅ OK
+fragment F on User @argumentDefinitions(userId: { type: "ID!" }) {
+  friend(id: $userId) { id }
+}
+
+# ❌ ERROR: $userId is used but not declared
+fragment F on User @argumentDefinitions(role: { type: "String!" }) {
+  friend(id: $userId) { id }
+}
+
+# ❌ ERROR: "role" is declared but never used
+fragment F on User @argumentDefinitions(userId: { type: "ID!" }, role: { type: "String!" }) {
+  friend(id: $userId) { id }
+}
+```
+
+Fragments without `@argumentDefinitions` may use variables freely (standard GraphQL behavior — variables flow from the enclosing operation).
+
+## Development
 
 ```bash
-# 依存関係のインストール
 pnpm install
-
-# ビルド
-pnpm run build
-
-# テスト実行
-pnpm run test
-
-# 開発モード（ウォッチモード）
-pnpm run dev
+pnpm build
+pnpm test
 ```
 
-### ディレクトリ構造
-
-```
-graphql-fragment-argument-linter/
-├── src/
-│   ├── index.ts      # エントリーポイント
-│   ├── plugin.ts     # プラグイン本体
-│   ├── visitor.ts    # GraphQL AST Visitor
-│   └── types.ts      # 型定義
-├── tests/
-│   └── plugin.test.ts # ユニットテスト
-└── dist/             # ビルド出力（生成される）
-```
-
-## 技術スタック
-
-- **TypeScript** - 型安全な開発
-- **GraphQL** - GraphQLスキーマとドキュメントの解析
-- **Vitest** - 高速なテストランナー
-- **GraphQL Code Generator** - プラグインフレームワーク
-
-## ライセンス
+## License
 
 MIT
-
-## コントリビューション
-
-Issue や Pull Request は歓迎します！
-
-## サポート
-
-問題が発生した場合は、[GitHub Issues](https://github.com/yourusername/graphql-fragment-argument-linter/issues)で報告してください。
